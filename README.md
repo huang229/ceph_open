@@ -18,16 +18,16 @@ python ./ data_processing2015.py
 2. ISBI 2023       
 python ./ data_processing2023.py
 
-#Train  
+# Train  
 1. ISBI 2015     
 python ./train_ceph2015.py 
 
 2. ISBI 2023     
 python ./train_reg2023.py
 
-#Test
+# Test
 1. ISBI 2015     
 python ./test_ceph2015.py
 
-3. ISBI 2023     
+2. ISBI 2023     
 python ./test_reg2023.py 
