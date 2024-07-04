@@ -13,18 +13,27 @@ ISBI 2015 and ISBI 2023. The dataset needs to be downloaded by yourself.
 # Date preprocessing
 Before running the training and testing scripts, data preprocessing is required.
 1. ISBI 2015
+   
 python ./ data_processing2015.py
+
 2. ISBI 2023
+   
 python ./ data_processing2023.py
 
 #Train  
 1. ISBI 2015
+   
 python ./train_ceph2015.py 
+
 2. ISBI 2023
+   
 python ./train_reg2023.py
 
 #Test
 1. ISBI 2015
+   
 python ./test_ceph2015.py
+
 2. ISBI 2023
+   
 python ./test_reg2023.py 
