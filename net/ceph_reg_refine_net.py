@@ -417,90 +417,10 @@ class get_model(nn.Module):
         layer1, layer2, layer3, output = self.backone(x)
         hotmap = self.out1(output)
 
-        b, c, h, w = output.shape
-        pos1 = self.pos1.expand(b, -1, -1, -1).permute(0, 3, 1, 2)
-        pos2 = self.pos2.expand(b, -1, -1, -1).permute(0, 3, 1, 2)
-        pos3 = self.pos3.expand(b, -1, -1, -1).permute(0, 3, 1, 2)
-        pos4 = self.pos4.expand(b, -1, -1).view(b, self.sizem[0], self.sizem[1], -1).permute(0, 3, 1, 2)
-
-        layer1 = self.bn1(self.conv1(F.interpolate(layer1, (self.sizem[0], self.sizem[1])))).view(b, c, h* w).permute(0, 2, 1)
-        layer2 = self.bn2(self.conv2(F.interpolate(layer2, (self.sizem[0], self.sizem[1])))).view(b, c, h* w).permute(0, 2, 1)
-        layer3 = self.bn3(self.conv3(F.interpolate(layer3, (self.sizem[0], self.sizem[1])))).view(b, c, h* w).permute(0, 2, 1)
-        output = self.bn4(self.conv4(F.interpolate(output, (self.sizem[0], self.sizem[1]))))
-
-        pos1 = self.conv5(F.interpolate(pos1, (self.sizem[0], self.sizem[1]))).view(b, c, h* w).permute(0, 2, 1)
-        pos2 = self.conv6(F.interpolate(pos2, (self.sizem[0], self.sizem[1]))).view(b, c, h* w).permute(0, 2, 1)
-        pos3 = self.conv7(F.interpolate(pos3, (self.sizem[0], self.sizem[1]))).view(b, c, h* w).permute(0, 2, 1)
-        pos4 = self.conv8(F.interpolate(pos4, (self.sizem[0], self.sizem[1]))).view(b, c, h * w).permute(0, 2, 1)
-
-        layer1 = layer1 + pos1
-        layer2 = layer2 + pos2
-        layer3 = layer3 + pos3
-
-        x4 = output.view(b, c, h* w).permute(0, 2, 1)
-        sizes = [b, c, h, w]
-        #################################################################
-        inc = x4 + pos4
-        inc = torch.cat([inc,  self.cls_embed.expand(b, -1, -1)], dim=1)
-        pos = torch.cat([pos4, self.cls_embed.expand(b, -1, -1)], dim=1)
-        xcs = []
-        for cpb in self.InitBlock:
-            inc = cpb(inc)
-            xcs.append(inc)
-            inc = inc+pos
-        output1 = self.linear12(F.relu(self.linear11(xcs[-1][:, -19:, :])))
-        #################################################################
-        xc = (x4 + pos4)*self.wg[0] + layer1*self.wg[1] + layer2*self.wg[2] + layer3*self.wg[3]
-        output = x4 + pos4
-        inint_coords = get_cls_embed(layer1, layer2, layer3, output, output1[:, :, :2].detach(), sizes, self.wcl)
-        encoder_embed = self.cls_embed.expand(b, -1, -1)  + inint_coords * self.inintv
 
 
-        hs = []
-        inter_references = []
-        xc_ = torch.cat([xc, encoder_embed], dim=1)
-        reference_points = output1[:, :, :2].detach().clip(0, 1)
-        init_reference = reference_points
-        for i, cpb in enumerate(self.transblock):
-            xc_ = cpb(xc_)
-            tmp = self.fc_coord_branches[i](xc_[:, -cfg.PointNms:, :])
 
-            new_reference_points = tmp + inverse_sigmoid(reference_points)
-            new_reference_points = new_reference_points.sigmoid()
-
-            reference_points = new_reference_points
-
-            inint_coords = get_cls_embed(layer1, layer2, layer3, output, new_reference_points.detach(), sizes, self.wcl)
-            encoder_embed = self.cls_embed.expand(b, -1, -1) + inint_coords * self.inintv
-            pos = torch.cat([pos4* self.pg[0] + pos1 * self.pg[1] + pos2 * self.pg[2] + pos3 * self.pg[3], encoder_embed], dim=1)
-            xc_ = xc_ + pos
-
-            inter_references.append(reference_points)
-            hs.append(xc_[:, -cfg.PointNms:, :])
-        outputs = []
-        for lvl in range(len(inter_references)):
-            if lvl == 0:
-                reference = init_reference
-            else:
-                reference = inter_references[lvl - 1]
-            reference = inverse_sigmoid(reference)
-
-            tmp = self.fc_coord_branches[lvl](hs[lvl])
-            tmp = tmp + reference
-
-
-            outputs_sigma = self.fc_sigma_branches[lvl](hs[lvl])
-
-
-            outputs_coord = tmp.sigmoid()
-            delta_coord_output = self.fc_coord_output_branches[lvl](hs[lvl])
-            outputs_coord = (outputs_coord + delta_coord_output)
-
-            outputs_coord = torch.cat([outputs_coord, outputs_sigma], dim=-1)
-            outputs.append(outputs_coord)
-
-        # output = F.relu(self.linear21(xcs[-1][:, -encoder_embed.shape[1]:, :]))
-        # output = self.linear22(output)
+        
 
 
         return outputs, output1, hotmap
